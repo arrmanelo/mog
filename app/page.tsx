@@ -40,54 +40,80 @@ export default function HomePage() {
     <div className="min-h-screen">
       <Header />
 
-      {/* HERO — без изменений */}
-      <section className="relative h-screen w-full overflow-hidden">
-        <video ref={videoRef} className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline src="/main.mp4" />
-        <div className="absolute inset-0 bg-black/30" />
+      {/* HERO */}
+<section className="relative h-screen w-full overflow-hidden">
+  <video
+    ref={videoRef}
+    className="absolute inset-0 h-full w-full object-cover"
+    autoPlay
+    loop
+    muted
+    playsInline
+    src="/main.mp4"
+  />
+  <div className="absolute inset-0 bg-black/30" />
 
-        <div className="absolute inset-x-8 md:inset-x-16 top-1/2 -translate-y-1/2 w-auto max-w-2xl bg-white/80 backdrop-blur-sm p-6 md:p-10 lg:p-12 rounded-3xl shadow-xl">
-          <GraduationCap className="h-14 w-14 text-green-600 mb-6" />
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-            <span className="block text-gray-900">МЕТОДИЧЕСКАЯ</span>
-            <span className="block text-green-600">КОПИЛКА</span>
-            <span className="block text-orange-700">ДЛЯ УЧИТЕЛЕЙ</span>
-          </h1>
-          <p className="mt-6 text-lg text-gray-700">Полезный ресурс для обмена педагогическим опытом</p>
+  <div className="absolute inset-x-8 md:inset-x-16 top-1/2 -translate-y-1/2 w-auto max-w-2xl bg-white/80 backdrop-blur-sm p-6 md:p-10 lg:p-12 rounded-3xl shadow-xl">
+    <GraduationCap className="h-14 w-14 text-green-600 mb-6" />
+    
+    <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+      <span className="block text-gray-900">МЕТОДИЧЕСКАЯ</span>
+      <span className="block text-orange-700">КОПИЛКА</span>
+      <span className="block text-green-600">ДЛЯ УЧИТЕЛЕЙ</span>
+    </h1>
+    
+    <p className="mt-6 text-lg text-gray-700">Полезный ресурс для обмена педагогическим опытом</p>
 
-          <div className="mt-6 flex items-center gap-4">
-            <div className="h-20 w-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-              <img
-                src={slides[current].img || "/placeholder.svg"}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <p className="text-sm text-gray-700">{slides[current].text}</p>
-          </div>
+    {/* Фото + текст новости */}
+    <div className="mt-6 flex items-center gap-4">
+      <div className="h-20 w-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+        <img
+          src={slides[current].img || "/.mp4"}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+      </div>
+      <p className="text-sm text-gray-700">{slides[current].text}</p>
+    </div>
 
-          <div className="mt-8 flex items-center justify-between text-sm text-gray-500">
-            <span>{current + 1}/{slides.length}</span>
-            <div className="flex gap-2">
-              <button
-                onClick={prev}
-                className="h-8 w-8 rounded-full border border-gray-400 flex items-center justify-center hover:bg-gray-100"
-              >
-                ←
-              </button>
-              <button
-                onClick={next}
-                className="h-8 w-8 rounded-full border border-gray-400 flex items-center justify-center hover:bg-gray-100"
-              >
-                →
-              </button>
-            </div>
-          </div>
-        </div>
+    {/* 1/3 + круги со стрелками */}
+    <div className="mt-8 flex items-center justify-between">
+      <span className="font-medium text-orange-700 text-base">
+  {current + 1}/{slides.length}
+</span>
 
-        <button onClick={togglePause} className="absolute bottom-8 right-8 bg-red-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-red-700 transition">
-          {isPaused ? "▶ Play" : "⏸ Pause"} Video
+      <div className="flex gap-4">
+        {/* ← Предыдущий */}
+        <button
+          onClick={prev}
+          className="h-12 w-12 rounded-full border-[3px] border-orange-700 text-orange-700 flex items-center justify-center hover:bg-orange-50 transition-all active:scale-90"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
-      </section>
+
+        {/* → Следующий */}
+        <button
+          onClick={next}
+          className="h-12 w-12 rounded-full border-[3px] border-orange-700 text-orange-700 flex items-center justify-center hover:bg-orange-50 transition-all active:scale-90"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {/* Кнопка паузы видео */}
+  <button
+    onClick={togglePause}
+    className="absolute bottom-8 right-8 bg-orange-700 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-orange-800 transition"
+  >
+    {isPaused ? "▶ Play" : "⏸ Pause"} Video
+  </button>
+</section>
 
       {/* РАЗДЕЛЫ — ПЕРЕДЕЛАННЫЕ КАРТОЧКИ */}
       <section className="py-16 px-4 bg-gray-50">

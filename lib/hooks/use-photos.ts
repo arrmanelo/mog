@@ -1,48 +1,49 @@
-"use client"
+// lib/hooks/usePhotos.ts
+'use client'
 
-import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
-
-export type Photo = {
-  id: string
-  title: string
-  description: string
-  imageUrl: string
-  event: string
-  date: string
-  photographer: string
-  created_at?: string
-}
+import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
 
 export function usePhotos() {
-  const [photos, setPhotos] = useState<Photo[]>([])
+  const [photos, setPhotos] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from("photos")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setPhotos(data || []))
+    async function load() {
+      const { data, error } = await supabase.storage
+        .from('photos') // ← твой бакет
+        .list('', {
+          limit: 100,
+          // sort убрали — он не поддерживается в .list()
+        })
+
+      if (error || !data) {
+        console.error('Ошибка загрузки фото:', error)
+        setLoading(false)
+        return
+      }
+
+      // Сортируем по дате создания вручную (новые сверху)
+      const sortedFiles = data.sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+
+      const urls = await Promise.all(
+        sortedFiles.map(async (file) => {
+          const { data: signed } = await supabase.storage
+            .from('photos')
+            .createSignedUrl(file.name, 60 * 60 * 24 * 7) // 7 дней
+
+          return signed?.signedUrl || ''
+        })
+      )
+
+      setPhotos(urls.filter(Boolean))
+      setLoading(false)
+    }
+
+    load()
   }, [])
 
-  const addPhoto = async (photo: Omit<Photo, "id">) => {
-    const { data } = await supabase.from("photos").insert(photo).select()
-    if (data) setPhotos((prev) => [data[0], ...prev])
-  }
-
-  const updatePhoto = async (id: string, updates: Partial<Photo>) => {
-    const { data } = await supabase
-      .from("photos")
-      .update(updates)
-      .eq("id", id)
-      .select()
-    if (data) setPhotos((prev) => prev.map((p) => (p.id === id ? data[0] : p)))
-  }
-
-  const deletePhoto = async (id: string) => {
-    await supabase.from("photos").delete().eq("id", id)
-    setPhotos((prev) => prev.filter((p) => p.id !== id))
-  }
-
-  return { photos, addPhoto, updatePhoto, deletePhoto }
-} 
+  return { photos, loading }
+}
