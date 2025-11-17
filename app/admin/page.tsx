@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useLectures } from "@/lib/hooks/use-lectures"
-import { usePhotos } from "@/lib/hooks/use-photos"
+import { usePhotos } from "@/lib/hooks/usePhotos"
+import { supabase } from "@/lib/supabase"
 import { useVideos } from "@/lib/hooks/use-videos"
 import { useExperiences } from "@/lib/hooks/use-supabase-experiences"
 import { LectureForm } from "@/components/admin/lecture-form"
@@ -17,7 +18,7 @@ import { VideoForm } from "@/components/admin/video-form"
 import { ExperienceForm } from "@/components/admin/experience-form"
 import type { Experience } from "@/lib/hooks/use-supabase-experiences"
 import type { Lecture } from "@/lib/data/lectures"
-import type { Photo } from "@/lib/data/photos"
+import type { Photo } from "@/lib/hooks/usePhotos"
 import type { Video } from "@/lib/data/videos"
 import { Plus, Pencil, Trash2, BookOpen, ImageIcon, VideoIcon, MessageSquare } from "lucide-react"
 
@@ -25,7 +26,7 @@ export default function AdminPage() {
   const { isAuthenticated, isAdmin } = useAuth()
   const router = useRouter()
   const { lectures, addLecture, updateLecture, deleteLecture } = useLectures()
-  const { photos, addPhoto, updatePhoto, deletePhoto } = usePhotos()
+  const { photos, isLoading: photosLoading, addPhoto, updatePhoto, deletePhoto, refetch } = usePhotos()
   const { videos, addVideo, updateVideo, deleteVideo } = useVideos()
   const { experiences, addExperience, updateExperience, deleteExperience } = useExperiences()
 
@@ -37,6 +38,7 @@ export default function AdminPage() {
   const [editingPhoto, setEditingPhoto] = useState<Photo | undefined>(undefined)
   const [editingVideo, setEditingVideo] = useState<Video | undefined>(undefined)
   const [editingExperience, setEditingExperience] = useState<Experience | undefined>(undefined)
+
 
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) {
@@ -62,21 +64,27 @@ export default function AdminPage() {
     if (confirm("Удалить лекцию?")) deleteLecture(id)
   }
 
-  const handleAddPhoto = async (data: Omit<Photo, "id">) => {
-    await addPhoto(data)
-    setIsAddPhotoDialogOpen(false)
-  }
-
-  const handleUpdatePhoto = async (data: Omit<Photo, "id">) => {
-    if (editingPhoto) {
-      await updatePhoto(editingPhoto.id, data)
-      setEditingPhoto(undefined)
+    const handleAddPhoto = async (file: File, title: string) => {
+    try {
+      await addPhoto(file, title)
+      setIsAddPhotoDialogOpen(false)
+    } catch (err: any) {
+      alert("Ошибка при добавлении фото: " + (err.message || "Попробуйте ещё раз"))
     }
   }
 
-  const handleDeletePhoto = (id: string) => {
-    if (confirm("Удалить фото?")) deletePhoto(id)
+  const handleUpdatePhoto = async (file: File | null, title: string) => {
+    if (!editingPhoto?.id) return
+
+    try {
+      await updatePhoto(editingPhoto.id, file, title)
+      setEditingPhoto(undefined)
+      setIsAddPhotoDialogOpen(false)
+    } catch (err: any) {
+      alert("Ошибка при обновлении фото: " + (err.message || "Попробуйте ещё раз"))
+    }
   }
+
 
   const handleAddVideo = (data: Omit<Video, "id" | "views">) => {
     addVideo(data)
@@ -168,48 +176,72 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          {/* Фото */}
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5" />
-                    Управление фотогалереей
-                  </CardTitle>
-                  <CardDescription>Всего фотографий: {photos.length}</CardDescription>
-                </div>
-                <Button onClick={() => setIsAddPhotoDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Добавить фото
-                </Button>
+          {/* ФОТОГАЛЕРЕЯ */}
+<Card className="mb-8">
+  <CardHeader>
+    <div className="flex items-center justify-between">
+      <div>
+        <CardTitle className="flex items-center gap-2">
+          <ImageIcon className="h-5 w-5" />
+          Фотогалерея
+        </CardTitle>
+        <CardDescription>Всего фотографий: {photos.length}</CardDescription>
+      </div>
+      <Button onClick={() => setIsAddPhotoDialogOpen(true)}>
+        <Plus className="h-4 w-4 mr-2" />
+        Добавить фото
+      </Button>
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-3">
+      {photosLoading ? (
+        <p className="text-center py-8 text-muted-foreground">Загрузка фотографий...</p>
+      ) : photos.length === 0 ? (
+        <p className="text-center py-8 text-muted-foreground">Фотографии отсутствуют</p>
+      ) : (
+        photos.map((photo) => (
+          <div
+            key={photo.id}
+            className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition"
+          >
+            <div className="flex items-center gap-4 flex-1">
+              <div className="relative w-20 h-20 bg-muted rounded overflow-hidden">
+                <img
+                  src={photo.url}
+                  alt={photo.title || "Фото"}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {photos.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Фотографии отсутствуют</p>
-                ) : (
-                  photos.map((photo) => (
-                    <div key={photo.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{photo.title}</h3>
-                        <p className="text-sm text-muted-foreground">{photo.event}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setEditingPhoto(photo)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeletePhoto(photo.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div>
+                <h3 className="font-semibold">{photo.title || "Без названия"}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Добавлено: {new Date(photo.created_at).toLocaleDateString('ru-RU')}
+                </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditingPhoto(photo)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => deletePhoto(photo.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </CardContent>
+</Card>
 
           {/* Видео */}
           <Card className="mb-8">
@@ -342,14 +374,14 @@ export default function AdminPage() {
               {editingPhoto ? "Внесите изменения в фотографию" : "Заполните форму для добавления фотографии"}
             </DialogDescription>
           </DialogHeader>
-          <PhotoForm
-            photo ={editingPhoto}
-            onSubmit={editingPhoto ? handleUpdatePhoto : handleAddPhoto}
-            onCancel={() => {
-              setIsAddPhotoDialogOpen(false)
-              setEditingPhoto(undefined)
-            }}
-          />
+                <PhotoForm
+        photo={editingPhoto}
+        onSubmit={editingPhoto ? handleUpdatePhoto : handleAddPhoto}
+        onCancel={() => {
+          setIsAddPhotoDialogOpen(false)
+          setEditingPhoto(undefined)
+        }}
+      />
         </DialogContent>
       </Dialog>
 
