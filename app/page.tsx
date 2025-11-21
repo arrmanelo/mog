@@ -1,178 +1,405 @@
-// app/page.tsx — карточки "Разделы": красивее, под твой стиль (hero и остальное без изменений)
+'use client'
 
-"use client";
-import Link from "next/link";
-import Header from "@/components/header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Image as ImageIcon, Video, MessageSquare, GraduationCap } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Header from '@/components/header';
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useAuth } from "@/lib/auth-context"
+import { useLectures } from "@/lib/hooks/use-lectures"
+import { usePhotos } from "@/lib/hooks/use-photos"
+import { useVideos } from "@/lib/hooks/use-videos"
+import { useExperiences } from "@/lib/hooks/use-supabase-experiences"
+import { LectureForm } from "@/components/admin/lecture-form"
+import { PhotoForm }  from "@/components/admin/photo-form"
+import { VideoForm } from "@/components/admin/video-form"
+import { ExperienceForm } from "@/components/admin/experience-form"
+import type { Experience } from "@/lib/hooks/use-supabase-experiences"
+import type { Lecture } from "@/lib/data/lectures"
+import type { Photo } from "@/lib/data/photos"
+import type { Video } from "@/lib/data/videos"
+import { Plus, Pencil, Trash2, BookOpen, ImageIcon, VideoIcon, MessageSquare } from "lucide-react"
 
-export default function HomePage() {
-  // Видео-пауза
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const togglePause = () => {
-    if (videoRef.current) {
-      isPaused ? videoRef.current.play() : videoRef.current.pause();
-      setIsPaused(!isPaused);
+export default function AdminPage() {
+  const { isAuthenticated, isAdmin } = useAuth()
+  const router = useRouter()
+  const { lectures, addLecture, updateLecture, deleteLecture } = useLectures()
+  const { photos, addPhoto, updatePhoto, deletePhoto } = usePhotos()
+  const { videos, addVideo, updateVideo, deleteVideo } = useVideos()
+  const { experiences, addExperience, updateExperience, deleteExperience } = useExperiences()
+
+  const [isAddLectureDialogOpen, setIsAddLectureDialogOpen] = useState(false)
+  const [isAddPhotoDialogOpen, setIsAddPhotoDialogOpen] = useState(false)
+  const [isAddVideoDialogOpen, setIsAddVideoDialogOpen] = useState(false)
+  const [isAddExperienceDialogOpen, setIsAddExperienceDialogOpen] = useState(false)
+  const [editingLecture, setEditingLecture] = useState<Lecture | undefined>(undefined)
+  const [editingPhoto, setEditingPhoto] = useState<Photo | undefined>(undefined)
+  const [editingVideo, setEditingVideo] = useState<Video | undefined>(undefined)
+  const [editingExperience, setEditingExperience] = useState<Experience | undefined>(undefined)
+
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) {
+      router.push("/login")
     }
-  };
+  }, [isAuthenticated, isAdmin, router])
 
-  // Слайды новостей
-  const slides = [
-    { id: 1, img: "/.jpg", text: "Здесь что то будет в будущем" },
-    { id: 2, img: "/.jpg", text: "Здесь что то будет в будущем 2" },
-    { id: 3, img: "/.jpg", text: "Здесь что то будет в будущем 3" },
-  ];
-  const [current, setCurrent] = useState(0);
-  const prev = () => setCurrent((c) => (c === 0 ? slides.length - 1 : c - 1));
-  const next = () => setCurrent((c) => (c === slides.length - 1 ? 0 : c + 1));
+  if (!isAuthenticated || !isAdmin) return null
 
-  // Данные карточек
-  const features = [
-    { title: "Лекции", desc: "Текстовые материалы лекций по информатике и смежным дисциплинам", icon: BookOpen, href: "/lectures" },
-    { title: "Фотогалерея", desc: "Фотографии с лекций и учебных мероприятий", icon: ImageIcon, href: "/photos" },
-    { title: "Видеолекции", desc: "Видеозаписи лекций и образовательных материалов", icon: Video, href: "/videos" },
-    { title: "Обмен опытом", desc: "Площадка для обмена педагогическим опытом между преподавателями", icon: MessageSquare, href: "/experience" },
-  ];
+  const handleAddLecture = (data: Omit<Lecture, "id">) => {
+    addLecture(data)
+    setIsAddLectureDialogOpen(false)
+  }
+
+  const handleUpdateLecture = (data: Omit<Lecture, "id">) => {
+    if (editingLecture) {
+      updateLecture(editingLecture.id, data)
+      setEditingLecture(undefined)
+    }
+  }
+
+  const handleDeleteLecture = (id: string) => {
+    if (confirm("Удалить лекцию?")) deleteLecture(id)
+  }
+
+  const handleAddPhoto = async (data: Omit<Photo, "id">) => {
+    await addPhoto(data)
+    setIsAddPhotoDialogOpen(false)
+  }
+
+  const handleUpdatePhoto = async (data: Omit<Photo, "id">) => {
+    if (editingPhoto) {
+      await updatePhoto(editingPhoto.id, data)
+      setEditingPhoto(undefined)
+    }
+  }
+
+  const handleDeletePhoto = (id: string) => {
+    if (confirm("Удалить фото?")) deletePhoto(id)
+  }
+
+  const handleAddVideo = (data: Omit<Video, "id" | "views">) => {
+    addVideo(data)
+    setIsAddVideoDialogOpen(false)
+  }
+
+  const handleUpdateVideo = (data: Omit<Video, "id" | "views">) => {
+    if (editingVideo) {
+      updateVideo(editingVideo.id, data)
+      setEditingVideo(undefined)
+    }
+  }
+
+  const handleDeleteVideo = (id: string) => {
+    if (confirm("Удалить видео?")) deleteVideo(id)
+  }
+
+  const handleAddExperience = async (data: any) => {
+    await addExperience(data)
+    setIsAddExperienceDialogOpen(false)
+  }
+
+  const handleUpdateExperience = async (data: any) => {
+    if (editingExperience) {
+      await updateExperience(editingExperience.id, data)
+      setEditingExperience(undefined)
+    }
+  }
+
+  const handleDeleteExperience = async (id: string) => {
+    if (confirm("Удалить запись?")) {
+      await deleteExperience(id)
+    }
+  }
 
   return (
     <div className="min-h-screen">
       <Header />
 
-      {/* HERO */}
-<section className="relative h-screen w-full overflow-hidden">
-  <video
-    ref={videoRef}
-    className="absolute inset-0 h-full w-full object-cover"
-    autoPlay
-    loop
-    muted
-    playsInline
-    src="/main.mp4"
-  />
-  <div className="absolute inset-0 bg-black/30" />
-
-  <div className="absolute inset-x-8 md:inset-x-16 top-1/2 -translate-y-1/2 w-auto max-w-2xl bg-white/80 backdrop-blur-sm p-6 md:p-10 lg:p-12 rounded-3xl shadow-xl">
-    <GraduationCap className="h-14 w-14 text-green-600 mb-6" />
-    
-    <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-      <span className="block text-gray-900">МЕТОДИЧЕСКАЯ</span>
-      <span className="block text-orange-700">КОПИЛКА</span>
-      <span className="block text-green-600">ДЛЯ УЧИТЕЛЕЙ</span>
-    </h1>
-    
-    <p className="mt-6 text-lg text-gray-700">Полезный ресурс для обмена педагогическим опытом</p>
-
-    {/* Фото + текст новости */}
-    <div className="mt-6 flex items-center gap-4">
-      <div className="h-20 w-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-        <img
-          src={slides[current].img || "/.mp4"}
-          alt=""
-          className="h-full w-full object-cover"
-        />
-      </div>
-      <p className="text-sm text-gray-700">{slides[current].text}</p>
-    </div>
-
-    {/* 1/3 + круги со стрелками */}
-    <div className="mt-8 flex items-center justify-between">
-      <span className="font-medium text-orange-700 text-base">
-  {current + 1}/{slides.length}
-</span>
-
-      <div className="flex gap-4">
-        {/* ← Предыдущий */}
-        <button
-          onClick={prev}
-          className="h-12 w-12 rounded-full border-[3px] border-orange-700 text-orange-700 flex items-center justify-center hover:bg-orange-50 transition-all active:scale-90"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        {/* → Следующий */}
-        <button
-          onClick={next}
-          className="h-12 w-12 rounded-full border-[3px] border-orange-700 text-orange-700 flex items-center justify-center hover:bg-orange-50 transition-all active:scale-90"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  {/* Кнопка паузы видео */}
-  <button
-    onClick={togglePause}
-    className="absolute bottom-8 right-8 bg-orange-700 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-orange-800 transition"
-  >
-    {isPaused ? "▶ Play" : "⏸ Pause"} Video
-  </button>
-</section>
-
-      {/* РАЗДЕЛЫ — ПЕРЕДЕЛАННЫЕ КАРТОЧКИ */}
-      <section className="py-16 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-6xl">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">Разделы</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-8">
-            {features.map((f) => {
-              const Icon = f.icon;
-              return (
-                <Link key={f.href} href={f.href}>
-                  <Card className="group h-full bg-white border border-gray-200 rounded-2xl shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-green-400 cursor-pointer overflow-hidden">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
-                          <Icon className="h-8 w-8 text-green-600" />
-                        </div>
-                        <CardTitle className="text-xl text-gray-900">{f.title}</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-base text-gray-600 leading-relaxed">
-                        {f.desc}
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
+      <main className="container mx-auto px-4 py-8 pt-20">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">Панель администратора</h1>
+              <p className="text-muted-foreground">Управление содержимым методической копилки</p>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* О ПРОЕКТЕ — без изменений */}
-      <section className="bg-white py-16 px-4">
-        <div className="container mx-auto max-w-4xl">
+          {/* Лекции */}
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Управление лекциями
+                  </CardTitle>
+                  <CardDescription>Всего лекций: {lectures.length}</CardDescription>
+                </div>
+                <Button onClick={() => setIsAddLectureDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить лекцию
+                </Button>
+              </div>  
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {lectures.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Лекции отсутствуют</p>
+                ) : (
+                  lectures.map((lecture) => (
+                    <div key={lecture.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{lecture.title}</h3>
+                        <p className="text-sm text-muted-foreground">{lecture.category}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setEditingLecture(lecture)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteLecture(lecture.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Фото */}
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5" />
+                    Управление фотогалереей
+                  </CardTitle>
+                  <CardDescription>Всего фотографий: {photos.length}</CardDescription>
+                </div>
+                <Button onClick={() => setIsAddPhotoDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить фото
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {photos.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Фотографии отсутствуют</p>
+                ) : (
+                  photos.map((photo) => (
+                    <div key={photo.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{photo.title}</h3>
+                        <p className="text-sm text-muted-foreground">{photo.event}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setEditingPhoto(photo)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeletePhoto(photo.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Видео */}
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <VideoIcon className="h-5 w-5" />
+                    Управление видеолекциями
+                  </CardTitle>
+                  <CardDescription>Всего видео: {videos.length}</CardDescription>
+                </div>
+                <Button onClick={() => setIsAddVideoDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить видео
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {videos.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Видеолекции отсутствуют</p>
+                ) : (
+                  videos.map((video) => (
+                    <div key={video.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{video.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {video.category} • {video.duration}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setEditingVideo(video)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteVideo(video.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+{/* Обмен опытом */}
           <Card>
-            <CardHeader><CardTitle className="text-2xl">О проекте</CardTitle></CardHeader>
-            <CardContent className="space-y-4 text-muted-foreground leading-relaxed">
-              <p>Методическая копилка — это не просто сборник материалов, а живое сообщество преподавателей...</p>
-              <p>Наша цель — создать удобную платформу для обмена знаниями...</p>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Управление обменом опытом
+                  </CardTitle>
+                  <CardDescription>Всего записей: {experiences.length}</CardDescription>
+                </div>
+                <Button onClick={() => setIsAddExperienceDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить запись
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {experiences.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Записи отсутствуют</p>
+                ) : (
+                  experiences.map((experience) => (
+                    <div key={experience.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{experience.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {experience.author} • {experience.category || "Без категории"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setEditingExperience(experience)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteExperience(experience.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
-      </section>
+      </main>
 
-      {/* ФУТЕР — без изменений */}
-      <footer className="border-t py-8 px-4 mt-16 bg-gray-50">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between text-sm text-muted-foreground">
-          <div>
-            <p>наши контакты:</p>
-            <p>+7-(747)-737-80-92</p>
-            <p>+7-(708)-939-80-60</p>
-            <p>+7-(747)-934-92-38</p>
-          </div>
-          <div className="text-right mt-4 md:mt-0">
-            <p>© 2025 Методическая копилка. При поддержке Gym Coders.</p>
-          </div>
-        </div>
-      </footer>
+      {/* Лекции */}
+      <Dialog open={isAddLectureDialogOpen || !!editingLecture} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddLectureDialogOpen(false)
+          setEditingLecture(undefined)
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingLecture ? "Редактировать лекцию" : "Добавить новую лекцию"}</DialogTitle>
+            <DialogDescription>
+              {editingLecture ? "Внесите изменения в лекцию" : "Заполните форму для добавления новой лекции"}
+            </DialogDescription>
+          </DialogHeader>
+          <LectureForm
+            lecture={editingLecture}
+            onSubmit={editingLecture ? handleUpdateLecture : handleAddLecture}
+            onCancel={() => {
+              setIsAddLectureDialogOpen(false)
+              setEditingLecture(undefined)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+{/* Фото */}
+      <Dialog open={isAddPhotoDialogOpen || !!editingPhoto} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddPhotoDialogOpen(false)
+          setEditingPhoto(undefined)
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingPhoto ? "Редактировать фото" : "Добавить новое фото"}</DialogTitle>
+            <DialogDescription>
+              {editingPhoto ? "Внесите изменения в фотографию" : "Заполните форму для добавления фотографии"}
+            </DialogDescription>
+          </DialogHeader>
+          <PhotoForm
+            photo ={editingPhoto}
+            onSubmit={editingPhoto ? handleUpdatePhoto : handleAddPhoto}
+            onCancel={() => {
+              setIsAddPhotoDialogOpen(false)
+              setEditingPhoto(undefined)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Видео */}
+      <Dialog open={isAddVideoDialogOpen || !!editingVideo} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddVideoDialogOpen(false)
+          setEditingVideo(undefined)
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingVideo ? "Редактировать видео" : "Добавить новое видео"}</DialogTitle>
+            <DialogDescription>
+              {editingVideo ? "Внесите изменения в видеолекцию" : "Заполните форму для добавления видеолекции"}
+            </DialogDescription>
+          </DialogHeader>
+          <VideoForm
+            video={editingVideo}
+            onSubmit={editingVideo ? handleUpdateVideo : handleAddVideo}
+            onCancel={() => {
+              setIsAddVideoDialogOpen(false)
+              setEditingVideo(undefined)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Опыт */}
+      <Dialog open={isAddExperienceDialogOpen || !!editingExperience} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddExperienceDialogOpen(false)
+          setEditingExperience(undefined)
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingExperience ? "Редактировать запись" : "Добавить новую запись"}</DialogTitle>
+            <DialogDescription>
+              {editingExperience ? "Внесите изменения в запись" : "Заполните форму для добавления записи"}
+            </DialogDescription>
+          </DialogHeader>
+          <ExperienceForm
+            experience={editingExperience}
+            onSubmit={editingExperience ? handleUpdateExperience : handleAddExperience}
+            onCancel={() => {
+              setIsAddExperienceDialogOpen(false)
+              setEditingExperience(undefined)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }
